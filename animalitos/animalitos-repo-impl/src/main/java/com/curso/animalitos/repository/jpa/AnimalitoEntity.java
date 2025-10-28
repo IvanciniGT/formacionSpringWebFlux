@@ -5,23 +5,16 @@ import com.curso.animalitos.validations.DescripcionAnimalitoValida;
 import com.curso.animalitos.validations.EdadAnimalitoValida;
 import com.curso.animalitos.validations.EspecieAnimalitoValida;
 import com.curso.animalitos.validations.NombreAnimalitoValido;
-import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
-import java.util.UUID;
-
-/**
- * Entidad JPA que representa un animalito en la base de datos.
- * Implementa la interfaz Animalito del API del repositorio.
- */
-@Entity
-@Table(name = "animalitos", indexes = {
-        @Index(name = "idx_animalito_public_id", columnList = "public_id", unique = true)
-})
+@Table(name = "animalitos")
 @Data
 @Builder
 @NoArgsConstructor
@@ -32,20 +25,19 @@ public class AnimalitoEntity implements Animalito {
      * ID interno autoincremental (NO se expone fuera de la capa de persistencia)
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
+    @Column("id")
     private Long id;
     
     /**
      * ID público (UUID v4) que se expone a las capas superiores
      */
-    @Column(name = "public_id", nullable = false, unique = true, length = 36)
+    @Column("public_id")
     private String publicId;
     
     /**
      * Nombre del animalito
      */
-    @Column(name = "nombre", nullable = false, length = 50)
+    @Column("nombre")
     @NotNull
     @NombreAnimalitoValido
     private String nombre;
@@ -53,7 +45,7 @@ public class AnimalitoEntity implements Animalito {
     /**
      * Especie del animalito
      */
-    @Column(name = "especie", nullable = false, length = 30)
+    @Column("especie")
     @NotNull
     @EspecieAnimalitoValida
     private String especie;
@@ -61,7 +53,7 @@ public class AnimalitoEntity implements Animalito {
     /**
      * Edad del animalito en años
      */
-    @Column(name = "edad", nullable = false)
+    @Column("edad")
     @NotNull
     @EdadAnimalitoValida
     private Integer edad;
@@ -69,23 +61,9 @@ public class AnimalitoEntity implements Animalito {
     /**
      * Descripción del animalito
      */
-    @Column(name = "descripcion", length = 500)
+    @Column("descripcion")
     @DescripcionAnimalitoValida
     private String descripcion;
+
     
-    /**
-     * Callback que se ejecuta antes de persistir para generar el publicId
-     * y establecer valores por defecto
-     */
-    @PrePersist
-    private void prepararParaPersistencia() {
-        if (this.publicId == null) {
-            this.publicId = UUID.randomUUID().toString();
-        }
-        if (this.descripcion == null) {
-            this.descripcion = "";
-        }
-    }
-    
-    // Los getters de la interfaz Animalito se generan automáticamente por Lombok @Data
 }

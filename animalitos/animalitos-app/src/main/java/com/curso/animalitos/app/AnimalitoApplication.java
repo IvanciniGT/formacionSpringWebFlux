@@ -9,8 +9,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * Clase principal de la aplicación Spring Boot para Animalitos
  */
 @SpringBootApplication(scanBasePackages = "com.curso.animalitos")
-@EntityScan("com.curso.animalitos.repository.jpa")
-@EnableJpaRepositories("com.curso.animalitos.repository.jpa")
+//@EntityScan("com.curso.animalitos.repository.jpa")
+//@EnableJpaRepositories("com.curso.animalitos.repository.jpa")
 public class AnimalitoApplication {
 
     public static void main(String[] args) {

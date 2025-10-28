@@ -18,10 +18,11 @@ import static java.net.URI.create;
 @RequestMapping("/api/v1")
 public class ControladorRest {
 
-    @GetMapping("/hello") // NO ES REACTIVO. Es bloqueante a no poder más... Modelo tradicional!
+    @GetMapping("/hello") // SINCRONO. Bloqueante.
     public String hello() {
         return "Hello, World!";
     }
+
     @GetMapping("/bacon") // NO ES REACTIVO. Es bloqueante a no poder más... Modelo tradicional!
     public String bacon() {
         long tin = System.nanoTime();
@@ -35,6 +36,10 @@ public class ControladorRest {
     public Mono<String> baconNoBloqueante() {
         long tin = System.nanoTime();
         Mono<String> aDevolver = pedirBaconIpsumNoBloqueante();
+        aDevolver = aDevolver.map( texto -> {
+            System.out.println("Anoto que ya he servido un plato más de bacon!");
+            return texto.toUpperCase(); // Caliento el bacon
+        });
         long tfin = System.nanoTime();
         System.out.println("Tiempo de respuesta de baconipsum: " + (tfin - tin)/1_000_000 + " ms");
         return aDevolver;
@@ -141,12 +146,12 @@ public class ControladorRest {
             var respuesta = cliente.send(peticion, HttpResponse.BodyHandlers.ofString());
             // Ese send hace 3 cosas:
             // 1. Manda los datos de la petición al servidor remoto
-            // 2. Espera a que el servidor remoto procese la petición y le devuelva una respuesta **** AQUI ESTA LO GORDO !
-            // 3. Recibe los datos de la respuesta del servidor remoto
             long tfin = System.nanoTime();
             System.out.println("Tiempo de respuesta de la petición HTTP a baconipsum: " + (tfin - tin)/1_000_000 + " ms");
             // Devolución del cuerpo de la respuesta
             return respuesta.body();
+            // 2. Espera a que el servidor remoto procese la petición y le devuelva una respuesta **** AQUI ESTA LO GORDO !
+            // 3. Recibe los datos de la respuesta del servidor remoto
         } catch (Exception e) {
             e.printStackTrace();
             return "Error al obtener el texto de Bacon Ipsum";

@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -51,7 +53,8 @@ public interface AnimalitosRestV1Controller {
         )
     })
     @GetMapping
-    ResponseEntity<List<AnimalitoRestV1DTO>> listarAnimalitos();
+    Mono<ResponseEntity<Flux<AnimalitoRestV1DTO>>> listarAnimalitos();
+    //Flux<AnimalitoRestV1DTO>> listarAnimalitos(); // En este caso, la gestión de errores debe ir en un Advice.
 
     @Operation(
         summary = "Obtener un animalito por su ID público",
@@ -92,7 +95,7 @@ public interface AnimalitosRestV1Controller {
         )
     })
     @GetMapping("/{publicId}")
-    ResponseEntity<AnimalitoRestV1DTO> obtenerAnimalitoPorPublicId(
+    Mono<ResponseEntity<AnimalitoRestV1DTO>> obtenerAnimalitoPorPublicId(
         @Parameter(
             description = "Identificador público único del animalito",
             example = "550e8400-e29b-41d4-a716-446655440000",
@@ -132,7 +135,7 @@ public interface AnimalitosRestV1Controller {
         )
     })
     @PostMapping
-    ResponseEntity<AnimalitoRestV1DTO> crearAnimalito(
+    Mono<ResponseEntity<AnimalitoRestV1DTO>> crearAnimalito(
         @Parameter(
             description = "Datos del nuevo animalito a crear",
             required = true
@@ -179,7 +182,7 @@ public interface AnimalitosRestV1Controller {
         )
     })
     @PutMapping("/{publicId}")
-    ResponseEntity<AnimalitoRestV1DTO> modificarAnimalito(
+    Mono<ResponseEntity<AnimalitoRestV1DTO>> modificarAnimalito(
         @Parameter(
             description = "Identificador público único del animalito a modificar",
             example = "550e8400-e29b-41d4-a716-446655440000",
@@ -233,7 +236,7 @@ public interface AnimalitosRestV1Controller {
         )
     })
     @DeleteMapping("/{publicId}")
-    ResponseEntity<AnimalitoRestV1DTO> borrarAnimalito(
+    Mono<ResponseEntity<AnimalitoRestV1DTO>> borrarAnimalito(
         @Parameter(
             description = "Identificador público único del animalito a eliminar",
             example = "550e8400-e29b-41d4-a716-446655440000",

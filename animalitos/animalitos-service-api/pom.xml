@@ -17,4 +17,12 @@
     <name>Animalitos Service API</name>
     <description>API del servicio de animalitos</description>
 
+    <dependencies>
+        <!-- Dependencia de project reactor -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>

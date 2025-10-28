@@ -1,7 +1,6 @@
 package com.curso.animalitos.rest.impl.advice;
 
 import com.curso.animalitos.rest.dto.ErrorResponseRestV1DTO;
-import com.curso.animalitos.service.api.exception.AnimalitoNoEncontradoException;
 import com.curso.animalitos.service.api.exception.ErrorValidacionException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -21,22 +20,6 @@ import java.time.LocalDateTime;
 @Slf4j
 public class AnimalitoRestControllerAdvice {
 
-    @ExceptionHandler(AnimalitoNoEncontradoException.class)
-    public ResponseEntity<ErrorResponseRestV1DTO> manejarAnimalitoNoEncontrado(
-            AnimalitoNoEncontradoException ex, 
-            WebRequest request) {
-        
-        log.warn("Animalito no encontrado: {}", ex.getMessage());
-        
-        var errorResponse = new ErrorResponseRestV1DTO(
-                HttpStatus.NOT_FOUND.value(),
-                ex.getMessage(),
-                LocalDateTime.now().toString(),
-                request.getDescription(false)
-        );
-        
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-    }
 
     @ExceptionHandler(ErrorValidacionException.class)
     public ResponseEntity<ErrorResponseRestV1DTO> manejarErrorValidacion(

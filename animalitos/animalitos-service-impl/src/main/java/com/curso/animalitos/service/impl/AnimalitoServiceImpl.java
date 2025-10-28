@@ -3,15 +3,17 @@ package com.curso.animalitos.service.impl;
 import com.curso.animalitos.repository.AnimalitoRepository;
 import com.curso.animalitos.repository.DatosModificarAnimalito;
 import com.curso.animalitos.repository.DatosNuevoAnimalito;
-import com.curso.animalitos.repository.AnimalitosRepositoryException;
 import com.curso.animalitos.service.api.AnimalitoService;
 import com.curso.animalitos.service.api.dto.AnimalitoServiceV1DTO;
 import com.curso.animalitos.service.api.dto.DatosModificarAnimalitoServiceV1DTO;
 import com.curso.animalitos.service.api.dto.DatosNuevoAnimalitoServiceV1DTO;
-import com.curso.animalitos.service.api.exception.AnimalitoNoEncontradoException;
+import com.curso.animalitos.service.api.exception.ErrorRepositorioException;
 import com.curso.animalitos.service.api.exception.ErrorValidacionException;
 import com.curso.animalitos.service.impl.mapper.AnimalitoServiceMapper;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,60 +30,64 @@ public class AnimalitoServiceImpl implements AnimalitoService {
     }
 
     @Override
-    public AnimalitoServiceV1DTO crear(DatosNuevoAnimalitoServiceV1DTO datosNuevo) {
+    public Mono<AnimalitoServiceV1DTO> crear(DatosNuevoAnimalitoServiceV1DTO datosNuevo) {
+        // El problema es que la excepción viene del repositorio al hacer el save...
+        // Bueno... relamnete no al hacer el save, cuando se haga la query a la BBDD.
+        // No es cuando me devuelven el mono, sino cuando el valor de dentro del mono se calcula.
+        // Realmente, hay 2 causas para poder recibir una excepción:
+        // - BBDD No disponible, o problema de otro tipo en BBDD
+        //   Estas otras no las puedo procesar aquí, porque son asíncronas... puedo dejar programado que
+        //   cuando se produzca una excption de cualquier tipo nosotros la trasnformemos en otra: ErrorRepositorioException
+        // - Error al validar un dato (síncronas). Las sincronas, las podemos capturar aquí, con el try-catch.
+        //   y devolver un mono con error de validación.
         try {
             DatosNuevoAnimalito datosRepo = mapper.toRepoDatosNuevo(datosNuevo);
-            return mapper.toServiceDTO(animalitoRepository.save(datosRepo));
-        } catch (AnimalitosRepositoryException e) {
-            throw new ErrorValidacionException("Error al crear animalito: " + e.getMessage(), e);
+            return animalitoRepository.save(datosRepo)
+                                      .map(mapper::toServiceDTO)
+                                      //cuando se produzca una excption de cualquier tipo nosotros la trasnformemos en otra: ErrorRepositorioException
+                                      .onErrorMap(e -> new ErrorRepositorioException("Error al crear animalito: " + e.getMessage(), e));
+
+        } catch (ConstraintViolationException e) { // Esta se produce de forma síncrona
+            return Mono.error(new ErrorValidacionException("Error de validación al crear animalito: " + e.getMessage(), e));
         }
     }
 
     @Override
-    public List<AnimalitoServiceV1DTO> obtenerTodos() {
-        try {
-            return animalitoRepository.findAll().stream()
+    public Flux<AnimalitoServiceV1DTO> obtenerTodos() {
+            return animalitoRepository.findAll()
                     .map(mapper::toServiceDTO)
-                    .toList();
-        } catch (AnimalitosRepositoryException e) {
-            throw new RuntimeException("Error al obtener animalitos: " + e.getMessage(), e);
-        }
+                    .onErrorMap(e -> new ErrorRepositorioException("Error al obtener todos los animalitos: " + e.getMessage(), e));
     }
 
     @Override
-    public Optional<AnimalitoServiceV1DTO> obtenerPorPublicId(String publicId) {
-        try {
+    public Mono<Optional<AnimalitoServiceV1DTO>> obtenerPorPublicId(String publicId) {
             return animalitoRepository.findByPublicId(publicId)
-                    .map(mapper::toServiceDTO);
-        } catch (AnimalitosRepositoryException e) {
-            throw new RuntimeException("Error al obtener animalito: " + e.getMessage(), e);
-        }
+                    .map( animalitoOpcional -> animalitoOpcional.map(mapper::toServiceDTO))
+                    .onErrorMap(e -> new ErrorRepositorioException("Error al obtener animalito por publicId: " + e.getMessage(), e));
     }
 
     @Override
-    public AnimalitoServiceV1DTO modificar(String publicId, DatosModificarAnimalitoServiceV1DTO datosModificar) {
+    public Mono<Optional<AnimalitoServiceV1DTO>> modificar(String publicId, DatosModificarAnimalitoServiceV1DTO datosModificar) {
+
+
         try {
             DatosModificarAnimalito datosRepo = mapper.toRepoDatosModificar(datosModificar);
-            return mapper.toServiceDTO(animalitoRepository.update(publicId, datosRepo));
-        } catch (AnimalitosRepositoryException e) {
-            // Si el error es porque no encontró el animalito, lanzar excepción específica
-            if (e.getMessage().contains("no encontrado") || e.getMessage().contains("not found")) {
-                throw new AnimalitoNoEncontradoException("Animalito no encontrado con ID: " + publicId, e);
-            }
-            throw new ErrorValidacionException("Error al modificar animalito: " + e.getMessage(), e);
+            return animalitoRepository.update(publicId, datosRepo)
+                    .map(animalitoOpcional -> animalitoOpcional.map(mapper::toServiceDTO))
+                    //cuando se produzca una excption de cualquier tipo nosotros la trasnformemos en otra: ErrorRepositorioException
+                    .onErrorMap(e -> new ErrorRepositorioException("Error al modificar animalito: " + e.getMessage(), e));
+
+        } catch (ConstraintViolationException e) { // Esta se produce de forma síncrona
+            return Mono.error(new ErrorValidacionException("Error de validación al modificar animalito: " + e.getMessage(), e));
         }
+
     }
 
     @Override
-    public void eliminar(String publicId) {
-        try {
-            Optional<com.curso.animalitos.repository.Animalito> eliminated = 
-                animalitoRepository.deleteByPublicId(publicId);
-            if (eliminated.isEmpty()) {
-                throw new AnimalitoNoEncontradoException("Animalito no encontrado con ID: " + publicId);
-            }
-        } catch (AnimalitosRepositoryException e) {
-            throw new RuntimeException("Error al eliminar animalito: " + e.getMessage(), e);
-        }
+    public Mono<Optional<AnimalitoServiceV1DTO>> eliminar(String publicId) {
+            var eliminated = animalitoRepository.deleteByPublicId(publicId);
+            return eliminated
+                    .map(animalitoOpcional -> animalitoOpcional.map(mapper::toServiceDTO))
+                    .onErrorMap(e -> new ErrorRepositorioException("Error al eliminar animalito: " + e.getMessage(), e));
     }
 }

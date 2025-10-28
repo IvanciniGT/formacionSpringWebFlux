@@ -18,10 +18,10 @@
     <description>Aplicación principal de animalitos</description>
 
     <dependencies>
-        <!-- Spring Boot Starter Web -->
+        <!-- Spring Boot Starter Web flex -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
         
         <!-- Spring Boot Starter Data JPA -->
