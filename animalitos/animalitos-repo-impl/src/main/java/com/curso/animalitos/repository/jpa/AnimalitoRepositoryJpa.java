@@ -62,13 +62,34 @@ public class AnimalitoRepositoryJpa implements AnimalitoRepository {
     @Override
     public Mono<Optional<Animalito>> update(String publicId, @Valid DatosModificarAnimalito datosModificarAnimalito) throws ConstraintViolationException {
         return r2dbcRepository.findByPublicId(publicId)
-                .map( entidadOpcional -> entidadOpcional.map(animalitoEntidad -> {
-                    animalitoEntidad.setNombre(datosModificarAnimalito.getNombre());
-                    animalitoEntidad.setEdad(datosModificarAnimalito.getEdad());
-                    animalitoEntidad.setDescripcion(datosModificarAnimalito.getDescripcion()!=null ? datosModificarAnimalito.getDescripcion() : "");
-                    return r2dbcRepository.save(animalitoEntidad).map(Animalito.class::cast);
-                }));
+                .map(
+                        entidadOpcional -> entidadOpcional.map(animalitoEntidad -> {
+                                animalitoEntidad.setNombre(datosModificarAnimalito.getNombre());
+                                animalitoEntidad.setEdad(datosModificarAnimalito.getEdad());
+                                animalitoEntidad.setDescripcion(datosModificarAnimalito.getDescripcion()!=null ? datosModificarAnimalito.getDescripcion() : "");
+                                return animalitoEntidad;
+                        })
+                ) // Mono<Optional<AnimalitoEntity>>
+/*                .flatMap( entidadOpcional -> {
+                         if(entidadOpcional.isPresent()){
+                                return r2dbcRepository.save(entidadOpcional.get())
+                                        .map(Optional::of);
+                            }
+                         return Mono.just(Optional.empty());
+                    }
+                );*/
 
+                .flatMap( entidadOpcional ->
+                            entidadOpcional.
+                                    <Mono< Optional<Animalito>>>map(animalitoEntity -> r2dbcRepository.save(animalitoEntity)
+                                    .map(Optional::of)).orElseGet(() -> Mono.just(Optional.empty()))
+                )
+
+                .onErrorMap( e -> new AnimalitosRepositoryException("Error al guardar nuevo animalito", e) );
+
+        // FlatMap nos permite aplicar transformaciones que devuelven Mono/Flux, desde un Mono/Flux inicial.
+        // Encadenar varias operaciones asíncronas.
+        // El map se ejecuta sincronicamente
 
     }
 
