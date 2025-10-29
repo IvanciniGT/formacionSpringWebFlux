@@ -34,22 +34,19 @@ public class AnimalitoRepositoryJpa implements AnimalitoRepository {
     @Override
     public Flux<Animalito> findAll()  {
             return r2dbcRepository.findAll()
-                    .map(entity -> (Animalito) entity);
+                    .map(Animalito.class::cast)
+                    .onErrorMap( e -> new AnimalitosRepositoryException("Error al obtener todos los animalitos", e) );
     }
 
     @Override
     public Mono<Optional<Animalito>> findByPublicId(String publicId)  {
-        try {
             return r2dbcRepository.findByPublicId(publicId)
-                    .map(entity -> (Animalito) entity);
-        } catch (Exception e) {
-            throw new AnimalitosRepositoryException("Error al buscar animalito por publicId: " + publicId, e);
-        }
+                    .map( optionalAnimalito -> optionalAnimalito.map( Animalito.class::cast ) )
+                    .onErrorMap( e -> new AnimalitosRepositoryException("Error al obtener animalito con publicId: " + publicId, e) );
     }
 
     @Override
     public Mono<Animalito> save(@Valid DatosNuevoAnimalito datosNuevoAnimalito) throws ConstraintViolationException {
-        try {
             AnimalitoEntity entity = AnimalitoEntity.builder()
                     .nombre(datosNuevoAnimalito.nombre())
                     .especie(datosNuevoAnimalito.especie())
@@ -57,33 +54,22 @@ public class AnimalitoRepositoryJpa implements AnimalitoRepository {
                     .descripcion(datosNuevoAnimalito.descripcion()!=null ? datosNuevoAnimalito.descripcion() : "")
                     .publicId(UUID.randomUUID().toString())
                     .build();
-
-
-
-            return r2dbcRepository.save(entity);
-        } catch (Exception e) {
-            throw new AnimalitosRepositoryException("Error al guardar nuevo animalito", e);
-        }
+            return r2dbcRepository.save(entity)
+                    .map(Animalito.class::cast)
+                    .onErrorMap( e -> new AnimalitosRepositoryException("Error al guardar nuevo animalito", e) );
     }
 
     @Override
     public Mono<Optional<Animalito>> update(String publicId, @Valid DatosModificarAnimalito datosModificarAnimalito) throws ConstraintViolationException {
-        try {
-            Optional<AnimalitoEntity> entityExistente = r2dbcRepository.findByPublicId(publicId);
-            
-            if (entityExistente.isEmpty()) {
-                throw new AnimalitosRepositoryException("No se encontró animalito con publicId: " + publicId);
-            }
-            
-            AnimalitoEntity entity = entityExistente.get();
-            entity.setNombre(datosModificarAnimalito.getNombre());
-            entity.setEdad(datosModificarAnimalito.getEdad());
-            entity.setDescripcion(datosModificarAnimalito.getDescripcion());
-            
-            return r2dbcRepository.save(entity);
-        } catch (Exception e) {
-            throw new AnimalitosRepositoryException("Error al actualizar animalito con publicId: " + publicId, e);
-        }
+        return r2dbcRepository.findByPublicId(publicId)
+                .map( entidadOpcional -> entidadOpcional.map(animalitoEntidad -> {
+                    animalitoEntidad.setNombre(datosModificarAnimalito.getNombre());
+                    animalitoEntidad.setEdad(datosModificarAnimalito.getEdad());
+                    animalitoEntidad.setDescripcion(datosModificarAnimalito.getDescripcion()!=null ? datosModificarAnimalito.getDescripcion() : "");
+                    return r2dbcRepository.save(animalitoEntidad).map(Animalito.class::cast);
+                }));
+
+
     }
 
     @Override
