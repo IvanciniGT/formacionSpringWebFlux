@@ -1,4 +1,4 @@
-package com.curso.animalitos.repository.jpa;
+package com.curso.animalitos.repository.r2dbc;
 
 import com.curso.animalitos.repository.Animalito;
 import com.curso.animalitos.repository.AnimalitoRepository;
@@ -84,7 +84,6 @@ public class AnimalitoRepositoryJpa implements AnimalitoRepository {
                                     <Mono< Optional<Animalito>>>map(animalitoEntity -> r2dbcRepository.save(animalitoEntity)
                                     .map(Optional::of)).orElseGet(() -> Mono.just(Optional.empty()))
                 )
-
                 .onErrorMap( e -> new AnimalitosRepositoryException("Error al guardar nuevo animalito", e) );
 
         // FlatMap nos permite aplicar transformaciones que devuelven Mono/Flux, desde un Mono/Flux inicial.
@@ -95,18 +94,14 @@ public class AnimalitoRepositoryJpa implements AnimalitoRepository {
 
     @Override
     public Mono<Optional<Animalito>> deleteByPublicId(String publicId)  {
-        try {
-            Optional<AnimalitoEntity> entityExistente = r2dbcRepository.findByPublicId(publicId);
-            
-            if (entityExistente.isPresent()) {
-                AnimalitoEntity entity = entityExistente.get();
-                r2dbcRepository.delete(entity);
-                return Optional.of(entity);
+        Mono<Optional<AnimalitoEntity>> entityExistente = r2dbcRepository.findByPublicId(publicId);
+        return entityExistente.flatMap( entidadOpcional -> {
+            if (entidadOpcional.isPresent()) {
+                return r2dbcRepository.delete(entidadOpcional.get())
+                        .thenReturn(entidadOpcional.map(Animalito.class::cast));
+            }else {
+                return Mono.just(Optional.empty());
             }
-            
-            return Optional.empty();
-        } catch (Exception e) {
-            throw new AnimalitosRepositoryException("Error al eliminar animalito con publicId: " + publicId, e);
-        }
+        });
     }
 }
